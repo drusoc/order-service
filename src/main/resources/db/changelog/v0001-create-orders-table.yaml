@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0001
+      author: openspec
+      changes:
+        - createTable:
+            tableName: orders
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_price
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_weight
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+              - column:
+                  name: delivery_address_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payment_transaction_id
+                  type: UUID
+              - column:
+                  name: delivery_id
+                  type: UUID
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: orders
+            columns:
+              - column:
+                  name: user_id
+            indexName: idx_orders_user_id
+      rollback:
+        - dropIndex:
+            tableName: orders
+            indexName: idx_orders_user_id
+        - dropTable:
+            tableName: orders

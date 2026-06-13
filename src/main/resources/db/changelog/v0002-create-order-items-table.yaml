@@ -1,0 +1,100 @@
+databaseChangeLog:
+  - changeSet:
+      id: v0002
+      author: openspec
+      changes:
+        - createTable:
+            tableName: order_items
+            columns:
+              - column:
+                  name: id
+                  type: UUID
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: order_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: product_id
+                  type: UUID
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: price_at_purchase
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+              - column:
+                  name: discount_at_purchase
+                  type: SMALLINT
+                  defaultValueNumeric: 0
+              - column:
+                  name: final_price_per_item
+                  type: DOUBLE PRECISION
+                  constraints:
+                    nullable: false
+              - column:
+                  name: quantity
+                  type: INTEGER
+                  constraints:
+                    nullable: false
+              - column:
+                  name: seller_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: article
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: barcode
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: weight
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 0.0
+              - column:
+                  name: width
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 0.0
+              - column:
+                  name: height
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 0.0
+              - column:
+                  name: depth
+                  type: DOUBLE PRECISION
+                  defaultValueNumeric: 0.0
+        - addForeignKeyConstraint:
+            baseTableName: order_items
+            baseColumnNames: order_id
+            referencedTableName: orders
+            referencedColumnNames: id
+            constraintName: fk_order_items_order
+        - createIndex:
+            tableName: order_items
+            columns:
+              - column:
+                  name: order_id
+            indexName: idx_order_items_order_id
+      rollback:
+        - dropIndex:
+            tableName: order_items
+            indexName: idx_order_items_order_id
+        - dropForeignKeyConstraint:
+            baseTableName: order_items
+            constraintName: fk_order_items_order
+        - dropTable:
+            tableName: order_items
