@@ -1,12 +1,17 @@
 package by.java.enterprise.orderservice.service
 
+import by.java.enterprise.orderservice.dto.request.ChangeStatusRequest
 import by.java.enterprise.orderservice.dto.request.CreateOrderRequest
+import by.java.enterprise.orderservice.dto.response.OrderHistoryResponse
 import by.java.enterprise.orderservice.dto.response.OrderItemResponse
 import by.java.enterprise.orderservice.dto.response.OrderResponse
 import by.java.enterprise.orderservice.dto.response.OrderSummaryResponse
 import by.java.enterprise.orderservice.entity.OrderEntity
 import by.java.enterprise.orderservice.entity.OrderItemEntity
+import by.java.enterprise.orderservice.entity.OrderStatus
+import by.java.enterprise.orderservice.exception.OrderNotFoundException
 import by.java.enterprise.orderservice.repository.OrderRepository
+import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -53,6 +58,42 @@ class OrderService(
 
         val saved = orderRepository.save(order)
         return saved.toResponse()
+    }
+
+    fun getOrderHistory(
+        userId: UUID,
+        status: OrderStatus?,
+        page: Int,
+        size: Int
+    ): OrderHistoryResponse {
+        val pageRequest = PageRequest.of(page, size)
+        val orderPage = if (status != null) {
+            orderRepository.findByUserIdAndStatus(userId, status, pageRequest)
+        } else {
+            orderRepository.findByUserId(userId, pageRequest)
+        }
+
+        return OrderHistoryResponse(
+            orders = orderPage.content.map { it.toSummary() },
+            totalCount = orderPage.totalElements,
+            page = orderPage.number,
+            size = orderPage.size
+        )
+    }
+
+    fun getOrderDetails(orderId: UUID): OrderResponse {
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { OrderNotFoundException(orderId) }
+        return order.toResponse()
+    }
+
+    fun changeOrderStatus(orderId: UUID, request: ChangeStatusRequest): OrderResponse {
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { OrderNotFoundException(orderId) }
+
+        statusMachine.validateTransition(order.status, request.status)
+        order.status = request.status
+        return order.toResponse()
     }
 }
 
