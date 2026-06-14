@@ -10,6 +10,8 @@ import by.java.enterprise.orderservice.entity.OrderEntity
 import by.java.enterprise.orderservice.entity.OrderItemEntity
 import by.java.enterprise.orderservice.entity.OrderStatus
 import by.java.enterprise.orderservice.exception.OrderNotFoundException
+import by.java.enterprise.orderservice.kafka.OrderCreatedEvent
+import by.java.enterprise.orderservice.kafka.OrderEventProducer
 import by.java.enterprise.orderservice.repository.OrderRepository
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
@@ -21,7 +23,8 @@ import java.util.UUID
 class OrderService(
     private val orderRepository: OrderRepository,
     private val totalCalculator: OrderTotalCalculator,
-    private val statusMachine: OrderStatusMachine
+    private val statusMachine: OrderStatusMachine,
+    private val eventProducer: OrderEventProducer
 ) {
 
     fun createOrder(userId: UUID, request: CreateOrderRequest): OrderResponse {
@@ -94,6 +97,31 @@ class OrderService(
         statusMachine.validateTransition(order.status, request.status)
         order.status = request.status
         return order.toResponse()
+    }
+
+    private fun publishEvent(order: OrderEntity) {
+        val event = OrderCreatedEvent(
+            id = order.id,
+            userId = order.userId,
+            status = order.status.name,
+            totalPrice = order.totalPrice,
+            totalWeight = order.totalWeight,
+            deliveryAddressId = order.deliveryAddressId,
+            items = order.items.map { item ->
+                OrderCreatedEvent.Item(
+                    id = item.id,
+                    productId = item.productId,
+                    title = item.title,
+                    priceAtPurchase = item.priceAtPurchase,
+                    discountAtPurchase = item.discountAtPurchase,
+                    finalPricePerItem = item.finalPricePerItem,
+                    quantity = item.quantity,
+                    sellerName = item.sellerName
+                )
+            },
+            createdAt = order.createdAt.toString()
+        )
+        eventProducer.send(event)
     }
 }
 
