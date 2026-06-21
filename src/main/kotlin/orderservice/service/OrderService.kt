@@ -10,16 +10,18 @@ import by.java.enterprise.orderservice.entity.OrderEntity
 import by.java.enterprise.orderservice.entity.OrderItemEntity
 import by.java.enterprise.orderservice.entity.OrderStatus
 import by.java.enterprise.orderservice.exception.OrderNotFoundException
+import by.java.enterprise.orderservice.kafka.OrderCreatedEvent
+import by.java.enterprise.orderservice.kafka.MakePaymentEvent
 import by.java.enterprise.orderservice.kafka.ReserveProductEvent
 import by.java.enterprise.orderservice.kafka.ReserveProductItem
 import by.java.enterprise.orderservice.outbox.OutboxEntity
 import by.java.enterprise.orderservice.outbox.OutboxRepository
 import by.java.enterprise.orderservice.repository.OrderRepository
+import tools.jackson.databind.ObjectMapper
 import org.springframework.data.domain.PageRequest
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import tools.jackson.databind.ObjectMapper
-import java.util.*
+import java.util.UUID
 
 @Service
 @Transactional
@@ -38,6 +40,9 @@ class OrderService(
         val order = OrderEntity(
             userId = userId,
             deliveryAddressId = request.deliveryAddressId,
+            recipientName = request.recipientName,
+            recipientPhone = request.recipientPhone,
+            pickupPointCode = request.pickupPointCode,
             totalPrice = totalPrice,
             totalWeight = totalWeight
         )
@@ -125,6 +130,9 @@ private fun OrderEntity.toResponse() = OrderResponse(
     id = id, userId = userId, status = status,
     totalPrice = totalPrice, totalWeight = totalWeight,
     deliveryAddressId = deliveryAddressId,
+    recipientName = recipientName,
+    recipientPhone = recipientPhone,
+    pickupPointCode = pickupPointCode,
     paymentTransactionId = paymentTransactionId,
     deliveryId = deliveryId,
     createdAt = createdAt, updatedAt = updatedAt,

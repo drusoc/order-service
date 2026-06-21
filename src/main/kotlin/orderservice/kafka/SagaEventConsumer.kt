@@ -77,8 +77,30 @@ class SagaEventConsumer(
             statusMachine.validateTransition(order.status, OrderStatus.PAID)
             order.status = OrderStatus.PAID
             orderRepository.save(order)
-            val payload = PlacedEvent(orderId = order.id)
-            saveOutbox("order-placed-event", orderId.toString(), payload)
+
+            val deliveryEvent = DeliveryRequiredEvent(
+                eventId = UUID.randomUUID().toString(),
+                orderId = order.id.toString(),
+                userId = order.userId.toString(),
+                tariffCode = "136",
+                senderCityCode = "44",
+                recipientCityCode = "44",
+                pickupPointCode = order.pickupPointCode ?: "EV1",
+                recipient = DeliveryRecipient(
+                    name = order.recipientName ?: "User",
+                    phone = order.recipientPhone ?: "0000000000"
+                ),
+                packages = order.items.mapIndexed { i, item ->
+                    DeliveryPackage(
+                        number = (i + 1).toString(),
+                        weightGram = (item.weight * 1000).toInt().coerceAtLeast(1),
+                        lengthCm = item.width.toInt().coerceAtLeast(1),
+                        widthCm = item.depth.toInt().coerceAtLeast(1),
+                        heightCm = item.height.toInt().coerceAtLeast(1)
+                    )
+                }
+            )
+            saveOutbox("orders.delivery.required", orderId.toString(), deliveryEvent)
         } else {
             val payload = RollbackReservationEvent(
                 eventId = UUID.randomUUID().toString(),
@@ -90,6 +112,63 @@ class SagaEventConsumer(
             saveOutbox("rollback-reservation-event", orderId.toString(), payload)
         }
         processedEventRepository.save(ProcessedEventEntity(event.eventId, orderId, "payment-created-event"))
+    }
+
+    @KafkaListener(topics = ["\${app.kafka.topic.delivery-status-changed}"])
+    @Transactional
+    fun onDeliveryStatusChanged(raw: String) {
+        val event = objectMapper.readValue(raw, DeliveryStatusChangedEvent::class.java)
+        val orderId = UUID.fromString(event.orderId)
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { OrderNotFoundException(orderId) }
+
+        when (event.status) {
+            "WAITING_FOR_PROVIDER" -> {
+                statusMachine.validateTransition(order.status, OrderStatus.PROCESSING)
+                order.status = OrderStatus.PROCESSING
+                order.deliveryId = event.deliveryId
+            }
+            "ACCEPTED" -> {
+                statusMachine.validateTransition(order.status, OrderStatus.IN_DELIVERY)
+                order.status = OrderStatus.IN_DELIVERY
+                order.deliveryId = event.deliveryId
+            }
+            "READY_FOR_PICKUP" -> {
+                statusMachine.validateTransition(order.status, OrderStatus.READY_FOR_PICKUP)
+                order.status = OrderStatus.READY_FOR_PICKUP
+            }
+            "DELIVERED" -> {
+                statusMachine.validateTransition(order.status, OrderStatus.COMPLETED)
+                order.status = OrderStatus.COMPLETED
+            }
+        }
+        orderRepository.save(order)
+    }
+
+    @KafkaListener(topics = ["\${app.kafka.topic.delivery-failed}"])
+    @Transactional
+    fun onDeliveryFailed(raw: String) {
+        val event = objectMapper.readValue(raw, DeliveryFailedEvent::class.java)
+        val orderId = UUID.fromString(event.orderId)
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { OrderNotFoundException(orderId) }
+
+        statusMachine.validateTransition(order.status, OrderStatus.CANCELLED)
+        order.status = OrderStatus.CANCELLED
+        orderRepository.save(order)
+    }
+
+    @KafkaListener(topics = ["\${app.kafka.topic.delivery-canceled}"])
+    @Transactional
+    fun onDeliveryCanceled(raw: String) {
+        val event = objectMapper.readValue(raw, DeliveryCanceledEvent::class.java)
+        val orderId = UUID.fromString(event.orderId)
+        val order = orderRepository.findById(orderId)
+            .orElseThrow { OrderNotFoundException(orderId) }
+
+        statusMachine.validateTransition(order.status, OrderStatus.CANCELLED)
+        order.status = OrderStatus.CANCELLED
+        orderRepository.save(order)
     }
 
     @KafkaListener(topics = ["\${app.kafka.topic.rollback-successfully}"])

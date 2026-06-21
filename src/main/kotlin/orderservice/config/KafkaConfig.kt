@@ -136,4 +136,32 @@ class KafkaConfig {
             .partitions(3)
             .replicas(1)
             .build()
+
+    @Bean
+    fun deliveryRequiredTopic(): NewTopic =
+        TopicBuilder.name("orders.delivery.required")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun deliveryStatusChangedTopic(): NewTopic =
+        TopicBuilder.name("deliveries.status.changed")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun deliveryFailedTopic(): NewTopic =
+        TopicBuilder.name("deliveries.failed")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun deliveryCanceledTopic(): NewTopic =
+        TopicBuilder.name("deliveries.canceled")
+            .partitions(3)
+            .replicas(1)
+            .build()
 }

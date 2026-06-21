@@ -36,6 +36,15 @@ class OrderEntity(
     @Column(name = "delivery_address_id", nullable = false)
     val deliveryAddressId: UUID,
 
+    @Column(name = "recipient_name")
+    var recipientName: String? = null,
+
+    @Column(name = "recipient_phone")
+    var recipientPhone: String? = null,
+
+    @Column(name = "pickup_point_code")
+    var pickupPointCode: String? = null,
+
     @Column(name = "payment_transaction_id")
     var paymentTransactionId: UUID? = null,
 

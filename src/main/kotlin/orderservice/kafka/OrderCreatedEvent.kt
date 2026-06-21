@@ -1,20 +1,18 @@
 package by.java.enterprise.orderservice.kafka
 
-import java.util.*
-
 data class OrderCreatedEvent(
-    val id: UUID,
-    val userId: UUID,
+    val id: java.util.UUID,
+    val userId: java.util.UUID,
     val status: String,
     val totalPrice: Double,
     val totalWeight: Double,
-    val deliveryAddressId: UUID,
+    val deliveryAddressId: java.util.UUID,
     val items: List<Item>,
     val createdAt: String
 ) {
     data class Item(
-        val id: UUID,
-        val productId: UUID,
+        val id: java.util.UUID,
+        val productId: java.util.UUID,
         val title: String,
         val priceAtPurchase: Double,
         val discountAtPurchase: Short,

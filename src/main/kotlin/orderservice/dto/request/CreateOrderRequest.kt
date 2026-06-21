@@ -13,6 +13,15 @@ data class CreateOrderRequest(
     @field:NotNull
     val deliveryAddressId: UUID,
 
+    @field:NotBlank
+    val recipientName: String,
+
+    @field:NotBlank
+    val recipientPhone: String,
+
+    @field:NotBlank
+    val pickupPointCode: String,
+
     @field:NotNull
     @field:Size(min = 1, message = "At least one item is required")
     val items: List<@Valid CreateOrderItemRequest>
