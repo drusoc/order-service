@@ -1,11 +1,16 @@
 package by.java.enterprise.orderservice.config
 
 import org.apache.kafka.clients.admin.NewTopic
+import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.clients.producer.ProducerConfig
+import org.apache.kafka.common.serialization.StringDeserializer
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory
 import org.springframework.kafka.config.TopicBuilder
+import org.springframework.kafka.core.ConsumerFactory
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory
 import org.springframework.kafka.core.DefaultKafkaProducerFactory
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.core.ProducerFactory
@@ -46,6 +51,9 @@ class KafkaConfig {
     @Value("\${spring.kafka.producer.properties.max.in.flight.requests.per.connection}")
     private lateinit var maxInFlightRequests: String
 
+    @Value("\${spring.kafka.consumer.group-id}")
+    private lateinit var consumerGroupId: String
+
     private fun producerConfig(): Map<String, Any> = mapOf(
         ProducerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
         ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG to keySerializer,
@@ -60,6 +68,14 @@ class KafkaConfig {
         ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION to maxInFlightRequests
     )
 
+    private fun consumerConfig(): Map<String, Any> = mapOf(
+        ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG to bootstrapServers,
+        ConsumerConfig.GROUP_ID_CONFIG to consumerGroupId,
+        ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
+        ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG to StringDeserializer::class.java,
+        ConsumerConfig.AUTO_OFFSET_RESET_CONFIG to "earliest"
+    )
+
     @Bean
     fun producerFactory(): ProducerFactory<String, String> =
         DefaultKafkaProducerFactory(producerConfig())
@@ -69,8 +85,54 @@ class KafkaConfig {
         KafkaTemplate(producerFactory())
 
     @Bean
-    fun orderEventsTopic(): NewTopic =
-        TopicBuilder.name("order.events")
+    fun consumerFactory(): ConsumerFactory<String, String> =
+        DefaultKafkaConsumerFactory(consumerConfig())
+
+    @Bean
+    fun kafkaListenerContainerFactory(): ConcurrentKafkaListenerContainerFactory<String, String> {
+        val factory = ConcurrentKafkaListenerContainerFactory<String, String>()
+        factory.setConsumerFactory(consumerFactory())
+        return factory
+    }
+
+    @Bean
+    fun reserveProductTopic(): NewTopic =
+        TopicBuilder.name("reserve-product-event")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun makePaymentTopic(): NewTopic =
+        TopicBuilder.name("make-payment-event")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun rollbackReservationTopic(): NewTopic =
+        TopicBuilder.name("rollback-reservation-event")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun orderPlacedTopic(): NewTopic =
+        TopicBuilder.name("order-placed-event")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun orderCancelledTopic(): NewTopic =
+        TopicBuilder.name("order-cancelled-event")
+            .partitions(3)
+            .replicas(1)
+            .build()
+
+    @Bean
+    fun orderCreatedTopic(): NewTopic =
+        TopicBuilder.name("order-created-event")
             .partitions(3)
             .replicas(1)
             .build()
